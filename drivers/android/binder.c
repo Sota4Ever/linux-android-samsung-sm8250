@@ -4484,6 +4484,9 @@ retry:
 			trd->sender_pid =
 				task_tgid_nr_ns(sender,
 						task_active_pid_ns(current));
+#ifdef CONFIG_FAST_TRACK
+			ftt_binder_enqueue(thread, t_from);
+#endif
 			if (binder_global_pid_lookups && trd->sender_pid == 0)
 				trd->sender_pid = task_tgid_nr(sender);
 		} else {
