@@ -500,7 +500,7 @@ static struct sk_buff *create_monitor_ctrl_open(struct sock *sk)
 	u8 ver[3];
 	u32 flags;
 
-	// No message needed when cookie is not present
+	/* No message needed when cookie is not present */
 	if (!hci_pi(sk)->cookie)
 		return NULL;
 
@@ -520,7 +520,7 @@ static struct sk_buff *create_monitor_ctrl_open(struct sock *sk)
 		mgmt_fill_version_info(ver);
 		break;
 	default:
-		// No message for unsupported format
+		/* No message for unsupported format */
 		return NULL;
 	}
 
@@ -555,7 +555,7 @@ static struct sk_buff *create_monitor_ctrl_close(struct sock *sk)
 	struct hci_mon_hdr *hdr;
 	struct sk_buff *skb;
 
-	// No message needed when cookie is not present
+	/* No message needed when cookie is not present */
 	if (!hci_pi(sk)->cookie)
 		return NULL;
 
@@ -565,7 +565,7 @@ static struct sk_buff *create_monitor_ctrl_close(struct sock *sk)
 	case HCI_CHANNEL_CONTROL:
 		break;
 	default:
-		// No message for unsupported format
+		/* No message for unsupported format */
 		return NULL;
 	}
 
@@ -615,7 +615,6 @@ static struct sk_buff *create_monitor_ctrl_command(struct sock *sk, u16 index,
 	return skb;
 }
 
-#if 0
 static void __printf(2, 3)
 send_monitor_note(struct sock *sk, const char *fmt, ...)
 {
@@ -709,7 +708,6 @@ static void send_monitor_control_replay(struct sock *mon_sk)
 
 	read_unlock(&hci_sk_list.lock);
 }
-#endif
 
 /* Generate internal stack event */
 static void hci_si_event(struct hci_dev *hdev, int type, int dlen, void *data)
@@ -848,7 +846,7 @@ static int hci_sock_release(struct socket *sock)
 	case HCI_CHANNEL_RAW:
 	case HCI_CHANNEL_USER:
 	case HCI_CHANNEL_CONTROL:
-		// Send event to monitor
+		/* Send event to monitor */
 		skb = create_monitor_ctrl_close(sk);
 		if (skb) {
 			hci_send_to_channel(HCI_CHANNEL_MONITOR, skb,
@@ -865,14 +863,15 @@ static int hci_sock_release(struct socket *sock)
 	hdev = hci_pi(sk)->hdev;
 	if (hdev) {
 		if (hci_pi(sk)->channel == HCI_CHANNEL_USER) {
-			// When releasing a user channel exclusive access,
-			// call hci_dev_do_close directly instead of calling
-			// hci_dev_close to ensure the exclusive access will
-			// be released and the controller brought back down.
-			//
-			// The checking of HCI_AUTO_OFF is not needed in this
-			// case since it will have been cleared already when
-			// opening the user channel.
+			/* When releasing a user channel exclusive access,
+			 * call hci_dev_do_close directly instead of calling
+			 * hci_dev_close to ensure the exclusive access will
+			 * be released and the controller brought back down.
+			 *
+			 * The checking of HCI_AUTO_OFF is not needed in this
+			 * case since it will have been cleared already when
+			 * opening the user channel.
+			 */
 
 			hci_dev_do_close(hdev);
 			hci_dev_clear_flag(hdev, HCI_USER_CHANNEL);
@@ -923,7 +922,7 @@ static int hci_sock_blacklist_del(struct hci_dev *hdev, void __user *arg)
 	return err;
 }
 
-// Ioctls that require bound socket
+/* Ioctls that require bound socket */
 static int hci_sock_bound_ioctl(struct sock *sk, unsigned int cmd,
 				unsigned long arg)
 {
@@ -1016,7 +1015,7 @@ static int hci_sock_ioctl(struct socket *sock, unsigned int cmd,
 	 * is only send once by checking if the cookie exists or not. The
 	 * socket cookie will be only ever generated once for the lifetime
 	 * of a given socket.
-     */
+	 */
 	if (hci_sock_gen_cookie(sk)) {
 		struct sk_buff *skb;
 
@@ -1030,7 +1029,7 @@ static int hci_sock_ioctl(struct socket *sock, unsigned int cmd,
 		if (sk_capable(sk, CAP_NET_ADMIN))
 			hci_sock_set_flag(sk, HCI_SOCK_TRUSTED);
 
-		// Send event to monitor
+		/* Send event to monitor */
 		skb = create_monitor_ctrl_open(sk);
 		if (skb) {
 			hci_send_to_channel(HCI_CHANNEL_MONITOR, skb,
@@ -1099,7 +1098,6 @@ done:
 static int hci_sock_bind(struct socket *sock, struct sockaddr *addr,
 			 int addr_len)
 {
-#if 0
 	struct sockaddr_hci haddr;
 	struct sock *sk = sock->sk;
 	struct hci_dev *hdev = NULL;
@@ -1157,12 +1155,12 @@ static int hci_sock_bind(struct socket *sock, struct sockaddr *addr,
 		hci_pi(sk)->channel = haddr.hci_channel;
 
 		if (!hci_sock_gen_cookie(sk)) {
-			// In the case when a cookie has already been assigned,
-			// then there has been already an ioctl issued against
-			// an unbound socket and with that triggered an open
-			// notification. Send a close notification first to
-			// allow the state transition to bounded.
-
+			/* In the case when a cookie has already been assigned,
+			 * then there has been already an ioctl issued against
+			 * an unbound socket and with that triggerd an open
+			 * notification. Send a close notification first to
+			 * allow the state transition to bounded.
+			 */
 			skb = create_monitor_ctrl_close(sk);
 			if (skb) {
 				hci_send_to_channel(HCI_CHANNEL_MONITOR, skb,
@@ -1176,7 +1174,7 @@ static int hci_sock_bind(struct socket *sock, struct sockaddr *addr,
 
 		hci_pi(sk)->hdev = hdev;
 
-		// Send event to monitor
+		/* Send event to monitor */
 		skb = create_monitor_ctrl_open(sk);
 		if (skb) {
 			hci_send_to_channel(HCI_CHANNEL_MONITOR, skb,
@@ -1228,13 +1226,13 @@ static int hci_sock_bind(struct socket *sock, struct sockaddr *addr,
 		err = hci_dev_open(hdev->id);
 		if (err) {
 			if (err == -EALREADY) {
-				// In case the transport is already up and
-				// running, clear the error here.
-
-				// This can happen when opening a user
-				// channel and HCI_AUTO_OFF grace period
-				// is still active.
-
+				/* In case the transport is already up and
+				 * running, clear the error here.
+				 *
+				 * This can happen when opening a user
+				 * channel and HCI_AUTO_OFF grace period
+				 * is still active.
+				 */
 				err = 0;
 			} else {
 				hci_dev_clear_flag(hdev, HCI_USER_CHANNEL);
@@ -1247,10 +1245,11 @@ static int hci_sock_bind(struct socket *sock, struct sockaddr *addr,
 		hci_pi(sk)->channel = haddr.hci_channel;
 
 		if (!hci_sock_gen_cookie(sk)) {
-			// In the case when a cookie has already been assigned,
-			// this socket will transition from a raw socket into
-			// a user channel socket. For a clean transition, send
-			// the close notification first.
+			/* In the case when a cookie has already been assigned,
+			 * this socket will transition from a raw socket into
+			 * a user channel socket. For a clean transition, send
+			 * the close notification first.
+			 */
 
 			skb = create_monitor_ctrl_close(sk);
 			if (skb) {
@@ -1260,14 +1259,15 @@ static int hci_sock_bind(struct socket *sock, struct sockaddr *addr,
 			}
 		}
 
-		// The user channel is restricted to CAP_NET_ADMIN
-		// capabilities and with that implicitly trusted.
+		/* The user channel is restricted to CAP_NET_ADMIN
+		 * capabilities and with that implicitly trusted.
+		 */
 
 		hci_sock_set_flag(sk, HCI_SOCK_TRUSTED);
 
 		hci_pi(sk)->hdev = hdev;
 
-		// Send event to monitor
+		/* Send event to monitor */
 		skb = create_monitor_ctrl_open(sk);
 		if (skb) {
 			hci_send_to_channel(HCI_CHANNEL_MONITOR, skb,
@@ -1291,8 +1291,9 @@ static int hci_sock_bind(struct socket *sock, struct sockaddr *addr,
 
 		hci_pi(sk)->channel = haddr.hci_channel;
 
-		// The monitor interface is restricted to CAP_NET_RAW
-		// capabilities and with that implicitly trusted.
+		/* The monitor interface is restricted to CAP_NET_RAW
+		 * capabilities and with that implicitly trusted.
+		 */
 
 		hci_sock_set_flag(sk, HCI_SOCK_TRUSTED);
 
@@ -1332,34 +1333,36 @@ static int hci_sock_bind(struct socket *sock, struct sockaddr *addr,
 			goto done;
 		}
 
-		// Users with CAP_NET_ADMIN capabilities are allowed
-		// access to all management commands and events. For
-		// untrusted users the interface is restricted and
-		// also only untrusted events are sent.
+		/* Users with CAP_NET_ADMIN capabilities are allowed
+		 * access to all management commands and events. For
+		 * untrusted users the interface is restricted and
+		 * also only untrusted events are sent.
+		 */
 
 		if (capable(CAP_NET_ADMIN))
 			hci_sock_set_flag(sk, HCI_SOCK_TRUSTED);
 
 		hci_pi(sk)->channel = haddr.hci_channel;
 
-		// At the moment the index and unconfigured index events
-		// are enabled unconditionally. Setting them on each
-		// socket when binding keeps this functionality. They
-		// however might be cleared later and then sending of these
-		// events will be disabled, but that is then intentional.
-
-		// This also enables generic events that are safe to be
-		// received by untrusted users. Example for such events
-		// are changes to settings, class of device, name etc.
+		/* At the moment the index and unconfigured index events
+		 * are enabled unconditionally. Setting them on each
+		 * socket when binding keeps this functionality. They
+		 * however might be cleared later and then sending of these
+		 * events will be disabled, but that is then intentional.
+		 *
+		 * This also enables generic events that are safe to be
+		 * received by untrusted users. Example for such events
+		 * are changes to settings, class of device, name etc.
+		 */
 
 		if (hci_pi(sk)->channel == HCI_CHANNEL_CONTROL) {
 			if (!hci_sock_gen_cookie(sk)) {
-				// In the case when a cookie has already been
-				// assigned, this socket will transition from
-				// a raw socket into a control socket. To
-				// allow for a clean transition, send the
-				// close notification first.
-
+				/* In the case when a cookie has already been
+				 * assigned, this socket will transition from
+				 * a raw socket into a control socket. To
+				 * allow for a clean transition, send the
+				 * close notification first.
+				 */
 				skb = create_monitor_ctrl_close(sk);
 				if (skb) {
 					hci_send_to_channel(HCI_CHANNEL_MONITOR, skb,
@@ -1368,7 +1371,7 @@ static int hci_sock_bind(struct socket *sock, struct sockaddr *addr,
 				}
 			}
 
-			// Send event to monitor
+			/* Send event to monitor */
 			skb = create_monitor_ctrl_open(sk);
 			if (skb) {
 				hci_send_to_channel(HCI_CHANNEL_MONITOR, skb,
@@ -1391,8 +1394,6 @@ static int hci_sock_bind(struct socket *sock, struct sockaddr *addr,
 done:
 	release_sock(sk);
 	return err;
-#endif
-    return 0;
 }
 
 static int hci_sock_getname(struct socket *sock, struct sockaddr *addr,
